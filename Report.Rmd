@@ -1,0 +1,1120 @@
+---
+author: Jaydeep Chakraborty
+classoption: compress
+fontsize: 10pt
+title: Predicting term deposit subscribers for bank 
+date: \today
+institute: Data Science Project 
+output: binb::iqss
+---
+
+
+# \scriptsize 1. Overview & challenge at hand
+### Predicting likely subscribers of term deposit product
+\footnotesize
+- A Portuguese bank conducts direct marketing campaign to \alert{sell term deposits}
+- Past data of all such campaigns are provided at \alert{customer level}
+- The data consists of \alert{customer demographics, product holding details at the bank and previous campaign history details.} Alongwith these information we also know if the customer responded successfully to the campaign and subscribed the term deposit product or not
+- Bank spends a lot of money to conduct the direct marketing campaigns. Currently the campaigns are executed on all prospects. The bank is keen to reduce the marketing spend by figuring out the \alert{likely subscribers from the future prospects}
+- We are keen to build a data science solution to help the bank. By considering the past customer data and responses we need to come up with a \alert{model that allows us to get the probability to subscribe for any future prospects.} By focusing resources only on the highly likely subscribers, the bank will be able to save substantial money and increase customer satisfaction.
+- We will be building a \alert{classification model} to solve this business challenge
+- Data Source - The data can be downloaded from [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip)
+- Citation - [Moro et al., 2014] S. Moro, P. Cortez and P. Rita. A Data-Driven Approach to Predict the Success of Bank Telemarketing. Decision Support Systems, Elsevier, 62:22-31, June 2014
+
+
+
+
+
+
+
+
+
+
+
+
+
+# \scriptsize 2. Solution approach
+## \tiny Steps involved in building the classification model
+### Steps involved in building the classification model{.t}
+
+#### \scriptsize \alertb{1. Environment set up} 
+\tiny
+- All required packages for data manipulation, visualization, model building \& pdf authoring is installed \& loaded 
+- Separate R file for \alert{all user defined functions} is loaded in the memory
+
+#### \scriptsize \alertb{2. Data load} 
+\tiny
+- A single dataset of \alert{45K observations} is downloaded \& imported 
+- \alert{Data Dictionary} is also created by extracting relevant details from a text file 
+- \alert{Data audit} is performed. \alert{No data cleaning} is required
+
+#### \scriptsize \alertb{3. Data exploration} 
+\tiny
+- \alert{Uni-variate analysis} is performed separately on all categorical \& continuous variables. This helps us in realizing if any variable needs an outlier or missing value treatment or if any variable transformation like log or grouping is required
+- \alert{Bi-variate analysis} is then performed only on the categorical variables so that we know the appropriate dummy variables that we need to create
+
+#### \scriptsize \alertb{4. Data preparation} 
+\tiny
+- Appropriate \alert{dummy variables} (1-hot encoding) are created 
+- \alert{Log transformation} is performed on continuous variables with large range of values \& highly skewed histogram 
+- \alert{Outliers} are identified among continuous variables 
+- \alert{Grouped variables} are created 
+- \alert{Removed multicollinear} variables using VIF test
+- \alert{CHAID} is used to create derived variables to find cohorts with higher percentage of  responders
+- \alert{Multiple datasets} with different percentage of training \& validation data were created
+
+
+### Steps involved in building the classification model (cont.){.t}
+#### \scriptsize \alertb{5. Model selection} 
+\tiny    
+- Models were built using \alert{Logistic Regression, Random Forest \& Gradient Boosting Model.} All model iterations were performed on training dataset with 90% observations and outlier treatment. This helped us select the best model iteration basis \alert{Accuracy and F1.}
+- \alert{New iterations} were then done on training datasets with 85% \& 80% observations using the selected modeling technique with same model parameters to check if a similar model will perform better on different splits of training \& validation
+
+#### \scriptsize \alertb{6. Best model detailing} 
+\tiny 
+- \alert{Lift chart} is built to estimate the benefit from the model 
+- \alert{Important variables} are identified to help the business realize the key levers that can increase the response rate
+
+## \tiny Key aspects of the solution approach
+### Key aspects of the solution approach{.t}
+\footnotesize
+- \alert{Multiple training \& validation split, multiple modeling techniques \& multiple iterations} are performed to come up with the best performing model
+
+- Overall response rate is low. Hence \alert{F1 statistic} is considered along with accuracy to compare model performance
+
+- \alert{Derived variables} are created using CHAID to define rules for identifying cohorts with high percentage of responders
+
+- \alert{Variable transformations} are done to improve their effectiveness in the model
+
+- Dummy variables are created by combining levels (of a categorical variable) with \alert{similar response rate}
+
+- The project report is built using RMarkdown and binb package to enable \alert{pdf output with slides.} Slides makes it easy to navigate and understand the report.
+
+## \tiny Facilitating easy understanding \& execution of code
+### Facilitating easy understanding \& execution of code{.t}
+\footnotesize
+- The file \alert{InternalFunctions.R} contains all the functions created by me. Each function allows us to implement a particular step of the solution. Several of these functions are called multiple times in the main code. This allows us to keep the main code simple and modular.
+
+- \alert{All important datasets, models, predicted rating \& rmse are provided separately.} In case one doesn't want to execute the entire code due to time constraint or machine limitations, one can simply load these files and see the outputs themselves. All the saved objects have detailed \& intuitive names for easy understanding.
+
+- \alert{Detailed comments} are provided in the report as well as the code to enable ease of understanding.
+
+- \alert{Variable naming} is kept uniform and intuitive to enable easy understanding throughout the program.
+
+## \tiny Navigating the project folder
+### Navigating the project folder{.t}
+\footnotesize
+- \alert{Report.pdf - }Report
+- \alert{Report.Rmd - }R Markdown file for creating the report
+- \alert{MainCode.R - }Main code for building classification model
+- \alert{InternalFunctions.R - }All functions created by me. These functions will be needed in main code
+- \alert{SavedObjects - }All the saved datasets, model objects & model predictions. 
+- \alert{All other files - }Are used for report generation
+
+
+
+
+
+
+
+
+
+
+
+
+
+# \scriptsize 3. Data load
+## \tiny Environment set up
+### Environment set up{.t}
+
+#### \scriptsize 1. Defining list of all required packages
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+required.packages.data.manipulation <- c('Hmisc','data.table','plyr','tidyverse','pander')
+required.packages.visualization <- c('RColorBrewer','ggplot2','gridExtra')
+required.packages.model <- c('car','caret','party','pROC','h2o')
+required.packages.authoring <- c('rmarkdown','binb')
+required.packages <- c(required.packages.data.manipulation,
+                       required.packages.visualization,
+                       required.packages.model,
+                       required.packages.authoring)
+```
+
+#### \scriptsize 2. Installing required packages if needed
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+packages.to.install <- required.packages[which(!required.packages %in% installed.packages()[,1])]
+if(length(packages.to.install)>0) {
+  cat('Following packages will be installed:\n', packages.to.install)
+  install.packages(packages.to.install)
+  packages.to.install <- required.packages[which(!required.packages %in% installed.packages()[,1])]
+}
+if(length(packages.to.install)>0) cat('Failed to install:\n', packages.to.install) else 
+  print('All required packages are installed.')
+```
+
+#### \scriptsize 3. Loading in memory
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+#Loading required packages in memory
+sapply(required.packages, require, character.only = TRUE)
+
+# Loading user defined functions created to make the code modular & easy to understand
+source('InternalFunctions.R')
+```
+
+## \tiny Data import
+### Data import{.t}
+
+#### \scriptsize 1. Importing bank marketing dataset from UCI Machine Learning Repository
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# data.load function will load the data from the UCI link
+dt <- data.load('https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip')
+```
+
+#### \scriptsize 2. Viewing top 5 rows
+\tiny
+```{r, results='asis', cache=T}
+pander(head(dt,5), style='simple', split.table = 80, caption = 'Top 5 rows')
+```
+
+### Data import (cont.){.t}
+#### \scriptsize 3. Data dictionary 
+\tiny
+```{r, results='asis', cache=T}
+# Creates the data dictionary from the file - 'bank-names.txt'
+show.data.dictionary()
+```
+
+
+## \tiny Data audit
+### Data audit{.t}
+
+#### \scriptsize Performing basic audit on data loaded 
+\tiny
+```r
+# Provides datatypes, descriptive statistics & missing value count for each column
+data.audit(dt)
+```
+Key insights from data audit:
+
+- Overall data has been loaded properly
+
+- There are \alert{no missing values}
+
+- Data type of each variable is correct
+
+- In the dependent variable 'y' we have \alert{11.7\% 'yes'} in both training \& validation dataset
+
+- \alert{Outliers} might be possible in variables - pdays, previous, campaign, duration, balance
+
+- In variable 'contact' we see that 6.4\% observations are 'telephone' while 28.8\% is 'unknown' and rest is 'cellular'. It is possible that all the unknown are actually telephone. We will consider making only 1 dummy variable for 'cellular'
+
+- All the character variables needs dummy variable (one-hot encoding) creation
+
+- Variable \alert{'day'} although considered as integer, will need to be considered as factor
+
+- Apart from 'day' variable transformation, no other data preparation is required. We will perform dummy creation post bi-variate analysis
+
+
+
+
+
+# \scriptsize 4. Data exploration
+## \tiny Uni-variate analysis of categorical variables
+### Uni-variate analysis of categorical variables
+\framesubtitle{univ.categ function performs uni-variate analysis on categorical data}
+#### \scriptsize Exploring y or our dependent variable, that we wish to predict
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'y', acc = 0.1)
+```
+\scriptsize
+\alert{12\% of customers have taken term deposit}
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - job
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'job')
+```
+\scriptsize
+\alert{Technician, management \& blue-collar comprises of 60\% of all job types}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - marital
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'marital')
+```
+\scriptsize
+\alert{Majority of customers are married}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - education
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'education')
+```
+\scriptsize
+\alert{Majority of customers have completed secondary education. There are 4\% unknown.}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - default
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'default')
+```
+\scriptsize
+\alert{Mostly there is only 1 value. 2\% of customers have credit in default.}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - housing
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'housing')
+```
+\scriptsize
+\alert{A little more than half of all customers have taken a housing loan}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - loan
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'loan')
+```
+\scriptsize
+\alert{High majority of customers do not have a personal loan}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - contact
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'contact')
+```
+\scriptsize
+\alert{Majority of customers can be contacted using mobile. Unknowns are quite higher than telephone.}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - day
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'day')
+```
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - month
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'month')
+```
+\scriptsize
+\alert{Almost one third of customers are contacted in May}
+
+
+### Uni-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - poutcome
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.categ(dt, 'poutcome')
+```
+\scriptsize
+\alert{Status of previous campaigns are unknown for 82\% of cases. Only 3\% have resulted in success earlier}
+
+## \tiny Uni-variate analysis of continous variables
+### Uni-variate analysis of continous variables
+\framesubtitle{univ.cont function performs uni-variate analysis on continuous data}
+#### \scriptsize Variable - age
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'age')
+```
+\scriptsize
+\alert{Higher outliers present. Outlier Cutoff 99.9\%ile = 83 years will be considered later}
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - balance
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'balance')
+```
+\scriptsize
+\alert{Lets perform log transformation as the range is very high and histogram is skewed}
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - We will consider the log transformation of balance
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'balance', log.transform = T) 
+```
+\scriptsize
+
+- \alert{Note that for log transformation, values = 0 are retained as 0 and for negative values -log10(abs(x)) is used}
+
+- \alert{We will create a derived variable with the following levels:
+1: less than -2.5 , 2: between -2.5 to 0, 3: equal to 0, 4: between 0 and 2.5, 5: greater than 2.5}
+
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - duration
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'duration')
+```
+\scriptsize
+\alert{Lets perform log transformation as the range is very high and histogram is skewed}
+
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - We will consider the log transformation of duration
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'duration', log.transform = T) 
+```
+\scriptsize
+
+- \alert{We will consider log transformation and also outlier treatment}
+
+- \alert{Values of log transformation more than 3.3 or less than 0.7 will be considered as outliers}
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - campaign
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'campaign')
+```
+\scriptsize
+\alert{Majority of values is 0. We will consider this variable as is with higher outlier treatment. Higher outlier cutoff will be 32.}
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - pdays
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'pdays')
+```
+\scriptsize
+\alert{Majority of values is 0. We will consider this variable as is with higher outlier treatment. Higher outlier cutoff will be 637.}
+
+
+### Uni-variate analysis of continous variables (cont.)
+#### \scriptsize Variable - previous
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+univ.cont(dt, 'previous')
+```
+\scriptsize
+\alert{Majority of values is 0. We will consider this variable as is with higher outlier treatment. Higher outlier cutoff will be 22.}
+
+
+
+## \tiny Bi-variate analysis of categorical variables
+### Bi-variate analysis of categorical variables
+\framesubtitle{biv.categ function helps in exploring relationship of categorical variables with dependent variable y}
+#### \scriptsize Variable - job
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'job')
+```
+\scriptsize
+\alert{4 dummy variables will be created for job type - student, retired, unemployed, technician or self-employed or admin or unknown or management.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - marital
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'marital')
+```
+\scriptsize
+\alert{2 dummy variables will be created for marital status - single, divorced.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - education
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'education')
+```
+\scriptsize
+\alert{3 dummy variables will be created for education type - tertiary, unknown , secondary.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - default
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'default')
+```
+\scriptsize
+\alert{1 dummy variable will be created for default - no.}
+
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - housing
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'housing')
+```
+\scriptsize
+\alert{1 dummy variable will be created for housing loan - no.}
+
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - loan
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'loan')
+```
+\scriptsize
+\alert{1 dummy variable will be created for personal loan - no.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - contact
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'contact')
+```
+\scriptsize
+\alert{2 dummy variables will be created for contact type - cellular, unknown.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - day
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'day')
+```
+\scriptsize
+\alert{5 dummy variables will be created for day - 1, 10, 30 or 3 or 22 or 25 or 4, 12 or 13 or 2 or 24 or 27 or 15 or 23 or 16, 11 or 9 or 26 or 5 or 14 or 8.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - month
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'month')
+```
+\scriptsize
+\alert{4 dummy variables will be created for month - mar, oct or dec or sep, feb, apr.}
+
+
+### Bi-variate analysis of categorical variables (cont.)
+#### \scriptsize Variable - poutcome
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+biv.categ(dt, 'poutcome')
+```
+\scriptsize
+\alert{3 dummy variables will be created for previous outcome - success, other, failure.}
+
+
+
+# \scriptsize 5. Data Preparation for Model Building
+## \tiny Dummy variable creation
+### Dummy variable creation
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# Dummy creation for - job
+dt <- dt %>% mutate(d.job.1 = ifelse(job == 'student',1,0),
+                    d.job.2 = ifelse(job == 'retired',1,0),
+                    d.job.3 = ifelse(job == 'unemployed',1,0),
+                    d.job.4 = ifelse(job %in% c('technician' , 'self-employed','admin.','unknown','management'),1,0))
+
+# Dummy creation for - marital
+dt <- dt %>% mutate(d.marital.1 = ifelse(marital == 'single',1,0),
+                    d.marital.2 = ifelse(marital == 'divorced',1,0))
+
+# Dummy creation for - education
+dt <- dt %>% mutate(d.education.1 = ifelse(education == 'tertiary',1,0),
+                    d.education.2 = ifelse(education == 'unknown',1,0),
+                    d.education.3 = ifelse(education == 'secondary',1,0))
+
+# Dummy creation for - default
+dt <- dt %>% mutate(d.default.1 = ifelse(default == 'no',1,0))
+
+# Dummy creation for - housing
+dt <- dt %>% mutate(d.housing.1 = ifelse(housing == 'no',1,0))
+
+# Dummy creation for - loan
+dt <- dt %>% mutate(d.loan.1 = ifelse(loan == 'no',1,0))
+
+# Dummy creation for - contact
+dt <- dt %>% mutate(d.contact.1 = ifelse(contact == 'cellular',1,0),
+                    d.contact.2 = ifelse(contact == 'unknown',1,0))
+
+# Dummy creation for - day
+dt <- dt %>% mutate(d.day.1 = ifelse(day == 1,1,0),
+                    d.day.2 = ifelse(day == 10,1,0),
+                    d.day.3 = ifelse(day %in% c(30,3,22,25,4),1,0),
+                    d.day.4 = ifelse(day %in% c(12,13,2, 24,27,15,23,16),1,0),
+                    d.day.5 = ifelse(day %in% c(11,9,26,5,14,8),1,0))
+```
+
+### Dummy variable creation (cont.) {.t}
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# Dummy creation for - month
+dt <- dt %>% mutate(d.month.1 = ifelse(month == 'mar',1,0),
+                    d.month.2 = ifelse(month %in% c('oct','dec','sep'),1,0),
+                    d.month.3 = ifelse(month == 'feb',1,0),
+                    d.month.4 = ifelse(month == 'apr',1,0))
+
+# Dummy creation for - poutcome
+dt <- dt %>% mutate(d.poutcome.1 = ifelse(poutcome == 'success',1,0),
+                    d.poutcome.2 = ifelse(poutcome == 'other',1,0),
+                    d.poutcome.3 = ifelse(poutcome == 'failure',1,0))
+
+# Converting dependent variable to 0 & 1
+dt$y <- ifelse(dt$y=='yes',1,0)
+
+# Removing categorical variables whose dummy variables has been created
+dt <- dt %>% select(-c(2:5,7:11,16))
+```
+
+## \tiny Creating log transformation variables
+### Creating log transformation variables for continous variables with high range and skewed histogram {.t}
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# Log transformation for balance
+dt$l.balance <- ifelse(dt$balance ==0, 0, ifelse(dt$balance<0, -log10(abs(dt$balance)), log10(dt$balance)))
+
+# Log transformation for duration
+dt$l.duration <- ifelse(dt$duration ==0, 0, ifelse(dt$duration<0, -log10(abs(dt$duration)), log10(dt$duration)))
+
+# Removing the variables whose log transformation is done
+dt <- dt[,-c(2,3)]
+```
+
+
+## \tiny Outlier treatment
+### Creating a flag for all outliers {.t}
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+dt$is.outlier <- F
+dt <- dt %>% mutate(is.outlier = ifelse(age>=83,T,is.outlier)) # 63 outliers
+dt <- dt %>% mutate(is.outlier = ifelse(l.duration>=3.3 | l.duration<=0.7,T,is.outlier)) # 120 outliers
+dt <- dt %>% mutate(is.outlier = ifelse(campaign>=32,T,is.outlier)) # 47 outliers
+dt <- dt %>% mutate(is.outlier = ifelse(pdays>=637,T,is.outlier)) # 41 outliers
+dt <- dt %>% mutate(is.outlier = ifelse(previous>=22,T,is.outlier)) # 49 outliers
+
+# Percentage of observations detected as outliers
+100*prop.table(table(dt$is.outlier))
+```
+\scriptsize
+\alert{0.7\% observations detected as outliers.}
+
+
+## \tiny Creating grouped variables
+### Creating grouped variables {.t}
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# Creating grouped variable for log of balance
+dt <- dt %>% mutate(g.l.balance = ifelse(l.balance>-2.5,
+                                      ifelse(l.balance==0,3,
+                                             ifelse(l.balance>0,ifelse(l.balance>2.5,5,4),2)),1))
+
+```
+
+
+## \tiny Remove multicollinear variables using VIF test
+### Remove multicollinear variables using VIF test {.t}
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+# lm.out <- lm(y~.-g.l.balance, data = dt)
+# sort(vif(lm.out))
+# 
+# lm.out <- lm(y~.-g.l.balance -pdays, data = dt)
+# sort(vif(lm.out))
+# 
+# lm.out <- lm(y~.-g.l.balance -pdays-d.contact.2, data = dt)
+# sort(vif(lm.out))
+
+lm.out <- lm(y~.-g.l.balance -pdays-d.contact.2-d.education.1, data = dt)
+sort(vif(lm.out))
+```
+\scriptsize
+\alert{All VIF values are now less than 2.}
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+# Removing variables with high VIF. Creating a backup of dt, before we do this.
+dt <- dt[, -c(3,19,12)]
+```
+\scriptsize
+\alert{We will keep g.l.balance. When building model we will always try only one between l.balance \& g.l.balance}
+
+
+## \tiny Derived variable creation with the help of CHAID
+### We will build a decision tree to find cohorts where there is a higher probability to find y = 1 {.t}
+\scriptsize
+- We want to find cohorts where y=1 for at least 12% of cases & minimum size of cohort is 500
+- Multiple iterations are done. The final selected iteration is shown here
+
+\tiny
+```{r echo=T, results='hide', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+m.chaid3 <- ctree(y ~ ., data = dt, controls = ctree_control(testtype = "Univariate",maxdepth = 3))
+plot.chaid(dt,m.chaid3,S = 500, P = 11.7, D= 3)
+```
+
+### We will go ahead with m.chaid3 and create 5 dummy variables as they cover maximum count of y =1 with highest proportion {.t}
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# Adding nodes to dt
+dt$chaid.node <- predict(m.chaid3, newdata = dt, type="node")
+# Creating dummy variables for node = 14, 8,5,15, 11
+dt <- dt %>% mutate(node.14 = ifelse(chaid.node == 14, 1,0))
+dt <- dt %>% mutate(node.8 = ifelse(chaid.node == 8, 1,0))
+dt <- dt %>% mutate(node.5 = ifelse(chaid.node == 5, 1,0))
+dt <- dt %>% mutate(node.15 = ifelse(chaid.node == 15, 1,0))
+dt <- dt %>% mutate(node.11 = ifelse(chaid.node == 11, 1,0))
+# Dropping node variable
+dt$chaid.node <- NULL
+```
+\scriptsize
+\alert{5 new dummy variables are added to the dataset. These derived variables might enrich the model.}
+
+## \tiny Creating final datasets for model building
+### Creating final datasets for model building {.t}
+
+- \tiny We will create 6 sets of training & validation datasets:
+- \tiny 1. Training dataset with 90\% observations and outlier treatment
+- \tiny 2. Training dataset with 90\% observations without outlier treatment
+- \tiny 3. Training dataset with 85\% observations and outlier treatment
+- \tiny 4. Training dataset with 85\% observations without outlier treatment
+- \tiny 5. Training dataset with 80\% observations and outlier treatment
+- \tiny 6. Training dataset with 80\% observations without outlier treatment
+
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+train.n.validation <- data.split(dt, train.percentage = 0.9, outlier.treatment = T)
+train90t <- train.n.validation$train
+validation90t <- train.n.validation$validation
+
+train.n.validation <- data.split(dt, train.percentage = 0.9, outlier.treatment = F)
+train90 <- train.n.validation$train
+validation90 <- train.n.validation$validation
+
+train.n.validation <- data.split(dt, train.percentage = 0.85, outlier.treatment = T)
+train85t <- train.n.validation$train
+validation85t <- train.n.validation$validation
+
+train.n.validation <- data.split(dt, train.percentage = 0.85, outlier.treatment = F)
+train85 <- train.n.validation$train
+validation85 <- train.n.validation$validation
+
+train.n.validation <- data.split(dt, train.percentage = 0.8, outlier.treatment = T)
+train80t <- train.n.validation$train
+validation80t <- train.n.validation$validation
+
+train.n.validation <- data.split(dt, train.percentage = 0.8, outlier.treatment = F)
+train80 <- train.n.validation$train
+validation80 <- train.n.validation$validation
+
+rm(train.n.validation)
+```
+\tiny
+- \alert{We will run several models on first set of training \& validation i.e. Training dataset with 90\% observations and outlier treatment}
+- \alert{The modeling technique selected from above basis F1 accuracy metric (on validation) will be applied on all other sets of training \& validation}
+- \alert{The best model will be then selected basis F1 accuracy metric on validation}
+
+# \scriptsize 6. Model Building
+## \tiny Logistic Regression Model
+### Logistic Regression model (Training dataset - 90% observation \& outlier treated){.t}
+#### \scriptsize Creating a table to store model iteration results
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+model.results <- data.frame(SNo = integer(), ModelType = character(), Model.Parameters = character(), 
+                            Accuracy.train = double(), Accuracy.validation = double(), F1.train = double(), 
+                            F1.validation = double(), stringsAsFactors=F)
+```
+
+#### \scriptsize Model iterations
+\tiny
+```r
+m.log.reg <- glm(y~. -g.l.balance , data=train90t, family=binomial())
+summary(m.log.reg)
+
+m.log.reg <- glm(y~. -g.l.balance -d.default.1, data=train90t, family=binomial())
+summary(m.log.reg)
+
+m.log.reg <- glm(y~. -g.l.balance -d.default.1 -d.poutcome.3, data=train90t, family=binomial())
+summary(m.log.reg)
+
+m.log.reg <- glm(y~. -g.l.balance -d.default.1 -d.poutcome.3 -age, data=train90t, family=binomial())
+summary(m.log.reg)
+
+m.log.reg <- glm(y~. -g.l.balance -d.default.1 -d.poutcome.3 -age - d.education.2, data=train90t, 
+family=binomial())
+summary(m.log.reg)
+```
+
+### Logistic Regression model
+#### \scriptsize Final Model Iteration - All variables in the model are significant
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+m.log.reg <- glm(y~. -g.l.balance -d.default.1 -d.poutcome.3 -age - d.education.2 - d.job.3, data=train90t, 
+                 family=binomial())
+summary(m.log.reg)
+```
+
+### Logistic Regression model {.t}
+#### \scriptsize Confusion matrix on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pred.log.reg.t <- get.predictions(m.log.reg, train90t, train90t)
+cm.t <- confusion.matrix(train90t$y, pred.log.reg.t)
+pander(cm.t, style='simple', split.table = 80)
+```
+
+### Logistic Regression model {.t}
+#### \scriptsize Confusion matrix on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pred.log.reg <- get.predictions(m.log.reg, train90t, validation90t)
+cm.v <- confusion.matrix(validation90t$y, pred.log.reg)
+pander(cm.v, style='simple', split.table = 80)
+```
+
+#### \scriptsize Adding model performance in result table
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+model.results <- add.model.result(1,'Logistic Regression', 'NA', cm.t, cm.v, model.results)
+```
+
+
+
+## \tiny Random Forest model
+### Random Forest model (Training dataset - 90% observation \& outlier treated){.t}
+#### \scriptsize Model iterations - Only the best iteration is shown here
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+h2o.init(nthreads=-1, max_mem_size = "10G")  # initializes with all available threads and 10Gb memory
+h2o.removeAll() # frees up the memory
+
+# Getting the input data ready
+train <- train90t
+train$y <- as.factor(train$y)
+
+# Model run
+m.rf2 <- h2o.randomForest(y = "y", training_frame = as.h2o(train), ntrees = 50, max_depth=15, nfolds = 3, 
+                          seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random")  
+
+# Confusion matrix on training data
+pred.rf2.t <- h2o.predict(m.rf2, as.h2o(train90t))
+cm.t <- confusion.matrix(train90t$y, as.data.frame(pred.rf2.t$predict)$predict)
+
+# Confusion matrix on validation data
+pred.rf2 <- h2o.predict(m.rf2, as.h2o(validation90t))
+cm.v <- confusion.matrix(validation90t$y, as.data.frame(pred.rf2$predict)$predict)
+
+# Adding model performance in result table
+model.results <- add.model.result(3,'Random Forest', 'ntrees = 50, max_depth=15', cm.t, cm.v, model.results)
+```
+
+
+### Random Forest model {.t}
+#### \scriptsize Performance on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.t, style='simple', split.table = 80)
+```
+
+#### \scriptsize Performance on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.v, style='simple', split.table = 80)
+```
+
+
+
+
+
+
+## \tiny Gradient Boosting model
+### Gradient Boosting model (Training dataset - 90% observation \& outlier treated){.t}
+#### \scriptsize Model iterations - Only the best iteration is shown here
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+h2o.init(nthreads=-1, max_mem_size = "10G")  # initializes with all available threads and 10Gb memory
+h2o.removeAll() # frees up the memory
+
+# Getting the input data ready
+train <- train90t
+train$y <- as.factor(train$y)
+
+# Model run
+m.rf2 <- h2o.randomForest(y = "y", training_frame = as.h2o(train), ntrees = 50, max_depth=15, nfolds = 3, 
+                          seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random") 
+
+m.gbm8 <- h2o.gbm(y = "y", training_frame = as.h2o(train), ntrees = 55, max_depth=5, nfolds = 3, 
+                  seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random") 
+
+m.ensemble <- h2o.stackedEnsemble(y = "y",training_frame = as.h2o(train), 
+                                  base_models = list(m.gbm8@model_id, m.rf2@model_id))
+ 
+# Confusion matrix on training data
+pred.ensemble.t <- h2o.predict(m.ensemble, as.h2o(train90t))
+cm.t <- confusion.matrix(train90t$y, as.data.frame(pred.ensemble.t$predict)$predict)
+
+# Confusion matrix on validation data
+pred.ensemble <- h2o.predict(m.ensemble, as.h2o(validation90t))
+cm.v <- confusion.matrix(validation90t$y, as.data.frame(pred.ensemble$predict)$predict)
+
+# Adding model performance in result table
+model.results <- add.model.result(19,'GBM', 'ntrees = 55, max_depth=5', cm.t, cm.v, model.results)
+```
+
+
+### Gradient Boosting model {.t}
+#### \scriptsize Performance on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.t, style='simple', split.table = 80)
+```
+
+#### \scriptsize Performance on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.v, style='simple', split.table = 80)
+```
+
+
+
+
+## \tiny Ensemble model
+### Ensemble model (Training dataset - 90% observation \& outlier treated){.t}
+#### \scriptsize Model iteration - best Random Forest model & best GBM model are considered
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+h2o.init(nthreads=-1, max_mem_size = "10G")  # initializes with all available threads and 10Gb memory
+h2o.removeAll() # frees up the memory
+
+# Getting the input data ready
+train <- train90t
+train$y <- as.factor(train$y)
+
+# Model run
+m.gbm8 <- h2o.gbm(y = "y", training_frame = as.h2o(train), ntrees = 55, max_depth=5, nfolds = 3, 
+                  seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random") 
+ 
+# Confusion matrix on training data
+pred.gbm8.t <- h2o.predict(m.gbm8, as.h2o(train90t))
+cm.t <- confusion.matrix(train90t$y, as.data.frame(pred.gbm8.t$predict)$predict)
+
+# Confusion matrix on validation data
+pred.gbm8 <- h2o.predict(m.gbm8, as.h2o(validation90t))
+cm.v <- confusion.matrix(validation90t$y, as.data.frame(pred.gbm8$predict)$predict)
+
+# Adding model performance in result table
+model.results <- add.model.result(21,'GBM + RF', 'NA', cm.t, cm.v, model.results)
+save(m.gbm8,pred.gbm8.t, pred.gbm8, file= 'best.model.rdata')
+```
+
+
+### Ensemble model {.t}
+#### \scriptsize Performance on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.t, style='simple', split.table = 80)
+```
+
+#### \scriptsize Performance on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.v, style='simple', split.table = 80)
+```
+
+
+# \scriptsize 7. Model Finalization
+## Selecting the best model
+### Result comparison of all model iterations {.t}
+\framesubtitle{All model iterations are shown here. Refer code for all iteration details.}
+
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+load('model.results1.rdata')
+mr <- model.results1 %>% arrange(desc(F1.validation))
+pander(mr, style='simple', split.table = 160)
+```
+
+\scriptsize
+
+GBM model with ntrees = 55 \& max_depth=5 has given the best performance
+
+
+
+### Model iterations on other sets of training \& validation data {.t}
+
+\scriptsize GBM model with ntrees = 55 \& max_depth=5 will be tried on other training datasets
+
+#### \scriptsize Model iteration on  90\% Training without outlier treatment
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+h2o.init(nthreads=-1, max_mem_size = "10G")
+h2o.removeAll()
+train <- train90
+train$y <- as.factor(train$y)
+
+m.gbm11 <- h2o.gbm(y = "y", training_frame = as.h2o(train), ntrees = 55, max_depth=5, nfolds = 3, 
+                   seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random") 
+
+# Performance on training data
+pred.gbm11.t <- h2o.predict(m.gbm11, as.h2o(train90))
+cm.t <- confusion.matrix(train90$y, as.data.frame(pred.gbm11.t$predict)$predict)
+
+# Performance on validation data
+pred.gbm11 <- h2o.predict(m.gbm11, as.h2o(validation90))
+cm.v <- confusion.matrix(validation90$y, as.data.frame(pred.gbm11$predict)$predict)
+
+# Adding model results
+model.results <- add.model.result(22,'90% Train without outlier treatement', 'GBM: ntrees = 55, 
+                                  max_depth=5', cm.t, cm.v, model.results)
+
+```
+
+### \scriptsize GBM model with ntrees = 55 \& max_depth=5 on Training (90\%) data without outlier treatment {.t}
+#### \scriptsize Performance on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.t[c(5:10),], style='simple', split.table = 80)
+```
+
+#### \scriptsize Performance on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.v[c(5:10),], style='simple', split.table = 80)
+```
+
+\tiny
+- \alert{Model performance has reduced on dataset without outlier treatment, showing that outlier treatment is important}
+
+- \alert{We will hence, try the next iterations only on outlier treated data with 85\% and 80\% training}
+
+
+
+
+
+### Model iterations on other sets of training \& validation data {.t}
+
+\scriptsize GBM model with ntrees = 55 \& max_depth=5 will be tried on other training datasets
+
+#### \scriptsize Model iteration on  85\% Training with outlier treatment
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+h2o.init(nthreads=-1, max_mem_size = "10G")
+h2o.removeAll()
+train <- train90
+train$y <- as.factor(train$y)
+
+m.gbm12 <- h2o.gbm(y = "y", training_frame = as.h2o(train), ntrees = 55, max_depth=5, nfolds = 3, 
+                   seed = 1,keep_cross_validation_predictions = TRUE, fold_assignment = "Random") 
+
+# Performance on training data
+pred.gbm12.t <- h2o.predict(m.gbm12, as.h2o(train85t))
+cm.t <- confusion.matrix(train85t$y, as.data.frame(pred.gbm12.t$predict)$predict)
+
+# Performance on validation data
+pred.gbm12 <- h2o.predict(m.gbm12, as.h2o(validation85t))
+cm.v <- confusion.matrix(validation85t$y, as.data.frame(pred.gbm12$predict)$predict)
+
+# Adding model results
+model.results <- add.model.result(23,'85% Train with outlier treatment', 'GBM: ntrees = 55, max_depth=5', 
+                                  cm.t, cm.v, model.results)
+```
+
+### \scriptsize GBM model with ntrees = 55 \& max_depth=5 on Training (85\%) data with outlier treatment {.t}
+#### \scriptsize Performance on training data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.t[c(5:10),], style='simple', split.table = 80)
+```
+
+#### \scriptsize Performance on validation data
+\tiny
+```{r, echo=T, results='show', error=F, warning=F, message=F, cache=T}
+pander(cm.v[c(5:10),], style='simple', split.table = 80)
+```
+
+\tiny
+- \alert{Model performance with 85\% training is lower than 90\% training data}
+
+- \alert{It is fair to assume that the model performance will not improve with 80\% training data.}
+
+Hence we can select GBM with ntrees = 55 \& max_depth=5 on 90\% Training Data with outlier treatment as the best model
+
+
+## Lift Chart
+### Lift Chart generation using final selected model on 90% training data with outlier treatment
+\tiny
+```{r, echo=T, results='hide', error=F, warning=F, message=F, cache=T}
+# m.gbm8 (GBM with ntrees = 55 & max_depth=5 has given the best performance
+load('best.model.rdata')
+# Lift chart on training data for best model
+lift.chart.train <- generate.lift.chart.table(train90t$y, as.data.frame(pred.gbm8.t$p1)$p1)
+# Lift chart on validation data for best model
+lift.chart.validation <- generate.lift.chart.table(validation90t$y, as.data.frame(pred.gbm8$p1)$p1)
+# Generating the lift chart to compare model performance on test & validation
+lift.chart <- ggplot(data = lift.chart.train, aes(x=Segment, y = CummPercentY_1)) + geom_point(color = 'blue') + 
+  geom_line(color = 'blue') + geom_line(aes(y=CummRandom), color = 'red') + 
+  scale_x_continuous(name ="Deciles basis Predicted Probability to buy term deposit (Decreasing order)", 
+                     breaks=seq(0,10,1))+
+  labs(y = 'Cummulative percentage of buyers (y=1') + ggtitle('Lift Chart on Training & Validation Data', 'Model 
+                                                              Performance Vs Random Selection')+
+  geom_text(aes(x = 5, y=41, label = 'Performance in top 3 deciles'), size = 5, hjust = 0, color = 'black') +
+  geom_text(aes(x = 5, y=34, label = 'Training - 92% of responders captured'), size = 4, hjust = 0, color = 'blue') +
+  geom_text(aes(x = 5, y=27, label = 'Validation - 89% of responders captured'), size = 4, hjust = 0, 
+            color = 'darkgreen') +
+  geom_text(aes(x = 5, y=20, label = 'Random - 30% of responders captured'), size = 4, hjust = 0, color = 'red') +
+  geom_line(data = data.frame(x = c(3,3), y = c(0,92)), aes(x = x, y = y), linetype = "dashed") +
+  geom_line(data = data.frame(x = c(0,3), y = c(92,92)), aes(x = x, y = y), linetype = "dashed") +
+  geom_line(data = data.frame(x = c(0,3), y = c(30,30)), aes(x = x, y = y), linetype = "dashed") +
+  geom_line(data = lift.chart.validation, aes(x=Segment, y = CummPercentY_1), color = 'darkgreen')+
+  geom_line(data = data.frame(x = c(0,3), y = c(89,89)), aes(x = x, y = y), linetype = "dashed")
+
+```
+
+
+### Lift Chart generation using final selected model on 90% training data with outlier treatment
+\tiny
+```{r echo=T, results='show', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '60%'}
+plot(lift.chart)
+```
+
+## \tiny Key variables
+### Key variables
+\scriptsize Plot of top 10 most important variables, sorted in the order of relative variable importance. The most important variable is given a value 1.
+\tiny
+```{r echo=T, results='show', error=F, warning=F, message=F, cache=T, fig.dim = c(10, 5), out.width='100%', out.height= '40%'}
+h2o.varimp_plot(m.gbm8,num_of_features =10)
+```
+
+\tiny
+- \alert{l.duration - }Last contact duration plays the most important role. Log transformation is considered.
+- \alert{d.poutcome.1 - } If outcome of previous marketing campaign was success
+- \alert{node.8 - } Derived variable from CHAID model
+- \alert{d.month.2 - } If last contact month was Sep or Oct or Dec
+- \alert{d.housing.1 - } Does not have housing loan
+- \alert{age - } Prospect age
+- \alert{d.month.1 - } If last contact month was Mar
+- \alert{d.contact.1 - } If communication type is Cellular
+- \alert{d.month.4 - } If last contact month was Apr
+- \alert{l.balance - } Average annual balance in Euro. Log transformation is considered.
+
+
+
